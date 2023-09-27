@@ -1,0 +1,381 @@
+Version: "0.1"
+Environment:
+  Name: Four-Rooms
+  Description: Four rooms environment # uses pathfinding to reach (and attack) the agent.
+  Observers:
+    Sprite2D:
+      TileSize: 24
+      BackgroundTile: gvgai/newset/chamber_wall.png #oryx/backBiege.png
+    Block2D:
+      TileSize: 24
+    Vector:
+      IncludePlayerId: true
+  Variables:
+    - Name: success
+      InitialValue: 0
+    - Name: failure
+      InitialValue: 0
+  Player:
+    AvatarObject: agent
+  Termination:
+    Lose:
+      #- eq: [agent:count, 0]
+      - eq: [failure, 1]
+    Win:
+      - eq: [success, 1]
+  Levels:
+    - |                                       # 0 - classic 4 rooms
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  .  W  W  W  W  .  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 1 - the floor is lava 4 rooms
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  f  f  .  f  f  W  f  .  f  f  f  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  f  .  .  .  .  .  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 2 - 4 rooms with random moving enemy
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  r  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  .  W  W  W  W  .  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 3 - the floor is lava 4 rooms and random moving enemy
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  r  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  f  f  .  f  f  W  f  .  f  f  f  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  f  .  .  .  .  .  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 4 - 4 rooms with a-star powered enemy
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  .  W  W  W  W  .  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  W  .  .  .  .  s  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 5 - the floor is lava 4 rooms and a-star planning enemy
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  f  f  .  f  f  W  f  .  f  f  f  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  f  .  .  .  .  s  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 6 - 4 rooms with the two enemies
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  r  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  W  W  .  W  W  W  W  .  W  W  W  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  W  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  W  .  .  .  .  s  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+    - |                                       # 7 - the floor is lava 4 rooms and the two enemies
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+      W  .  r  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  g  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  f  f  .  f  f  W  f  .  f  f  f  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  f  .  .  .  .  .  W
+      W  .  .  .  .  .  .  .  .  .  .  .  W
+      W  A  .  .  .  .  f  .  .  .  .  s  W
+      W  W  W  W  W  W  W  W  W  W  W  W  W
+
+Actions:
+
+  # Defines enemies movements
+
+  # == Smart spider ==
+  - Name: chase
+    InputMapping:
+      Internal: true
+    Behaviours:
+      # the smart spider can move into empty space and plan a chasing route
+      - Src:
+          Object: spider
+          Commands:
+            - mov: _dest
+            - exec:           # every time enemy moves execute the search
+                Action: chase
+                Delay: 10
+                Search:       # Finds a path from its current location to the agent
+                  ImpassableObjects: [wall, lava, goal]
+                  TargetObjectName: agent
+        Dst:
+          Object: _empty
+
+      # or if the spider does not move, but it still has to plan a chasing route
+      - Src:
+          Object: spider
+          Commands:
+            - exec:
+                Action: chase
+                Delay: 10
+                Search:
+                  ImpassableObjects: [wall, lava, goal]
+                  TargetObjectName: agent
+        Dst:
+          Object: spider
+
+      # Spider catches the agent. Remove agent and send a -1 reward
+      - Src:
+          Object: spider
+          Commands:
+            - mov: _dest
+        Dst:
+          Object: agent
+          Commands:
+            - reward: -1
+            - incr: failure
+            #- remove: true
+
+  # == Random bat ==
+  - Name: random_movement
+    InputMapping:
+      Internal: true
+    Behaviours:
+      # it can move into empty space (or where the other enemy is)
+      - Src:
+          Object: bat
+          Commands:
+            - mov: _dest
+            - exec:
+                Action: random_movement # re-execute random move with a small delay
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [_empty, spider]
+
+      # it cannot move into the wall (no mov: _dest), but we want to re-trigger again a random move
+      - Src:
+          Object: bat
+          Commands:
+            - exec:
+                Action: random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [wall, lava, goal, bat]
+
+      # if it catches the agent
+      - Src:
+          Object: bat
+          Commands:
+            - mov: _dest
+            #- reward: -1
+            - exec:
+                Action: random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: agent
+          Commands:
+            #- remove: true
+            - reward: -1
+            - incr: failure
+
+  - Name: move
+    Behaviours:
+      # The agent can move through empty space
+      - Src:
+          Object: agent
+          Commands:
+            - mov: _dest
+        Dst:
+          Object: _empty
+
+      # SUCCESS: If the agent gets to the goal it wins in life
+      - Src:
+          Object: agent
+          Commands:
+            - mov: _dest
+            #- incr: has_cheese  # next step/move we'll terminate due to incr this variable
+        Dst:
+          Object: goal
+          Commands:
+            - reward: 1
+            - incr: success
+
+      # FAILURE: If the agent moves to the enemy it dies painfully
+      - Src:
+          Object: agent
+          Commands:
+            - mov: _dest
+            - reward: -1
+            - incr: failure
+            #- remove: true
+        Dst:
+          Object: [spider, bat]
+
+      # FAILURE: If the agent moves to the lava it dies painfully
+      - Src:
+          Object: agent
+          Commands:
+            - mov: _dest
+            - reward: -1
+            - incr: failure
+            #- remove: true
+        Dst:
+          Object: lava
+
+Objects:
+  - Name: spider
+    Z: 3
+    InitialActions:
+      - Action: chase
+        Delay: 2
+        ActionId: 0
+    MapCharacter: s
+    Observers:
+      Sprite2D:
+        - Image: oryx/oryx_fantasy/avatars/spider1.png
+      Block2D:
+        - Shape: triangle
+          Color: [ 0.9, 0.2, 0.2 ]
+          Scale: 1.0
+
+  - Name: bat
+    Z: 4
+    InitialActions:
+      - Action: random_movement
+        Delay: 2
+        ActionId: 1
+        #Randomize: true
+    MapCharacter: r
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/snake.png #bat2.png # bee2
+      Block2D:
+        - Shape: triangle
+          Color: [ 0.2, 0.2, 0.9 ]
+          Scale: 1.0
+
+  - Name: agent
+    Z: 2
+    MapCharacter: A
+    Variables:
+      - Name: in_goal
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/rat1.png #gvgai/newset/pacman.png #gvgai/oryx/rat1.png #yeti1.png #oryx/oryx_fantasy/avatars/fireguy1.png
+      Block2D:
+        - Color: [ 0.0, 0.8, 0.0 ]
+          Shape: square
+
+  - Name: goal
+    Z: 1
+    MapCharacter: g
+    Observers:
+      Sprite2D:
+        - Image: gvgai/newset/cheese.png #burger.png
+      Block2D:
+        - Color: [ 0.0, 0.0, 0.8 ]
+          Shape: square
+
+  - Name: lava
+    Z: 3
+    MapCharacter: f
+    Observers:
+      Sprite2D:
+        - Image: oryx/oryx_fantasy/fire-2.png #oryx/oryx_iso_dungeon/lava-1.png
+      Block2D:
+        - Color: [ 0.99, 0.64, 0.0 ]
+          Shape: triangle
+
+  - Name: wall
+    MapCharacter: W
+    Observers:
+      Sprite2D:
+        - TilingMode: WALL_16
+          Image:
+#            - gvgai/oryx/dirtWall_0.png
+#            - gvgai/oryx/dirtWall_1.png
+#            - gvgai/oryx/dirtWall_2.png
+#            - gvgai/oryx/dirtWall_3.png
+#            - gvgai/oryx/dirtWall_4.png
+#            - gvgai/oryx/dirtWall_5.png
+#            - gvgai/oryx/dirtWall_6.png
+#            - gvgai/oryx/dirtWall_7.png
+#            - gvgai/oryx/dirtWall_8.png
+#            - gvgai/oryx/dirtWall_9.png
+#            - gvgai/oryx/dirtWall_10.png
+#            - gvgai/oryx/dirtWall_11.png
+#            - gvgai/oryx/dirtWall_12.png
+#            - gvgai/oryx/dirtWall_13.png
+#            - gvgai/oryx/dirtWall_14.png
+#            - gvgai/oryx/dirtWall_15.png
+            - oryx/oryx_fantasy/wall6-0.png
+            - oryx/oryx_fantasy/wall6-1.png
+            - oryx/oryx_fantasy/wall6-2.png
+            - oryx/oryx_fantasy/wall6-3.png
+            - oryx/oryx_fantasy/wall6-4.png
+            - oryx/oryx_fantasy/wall6-5.png
+            - oryx/oryx_fantasy/wall6-6.png
+            - oryx/oryx_fantasy/wall6-7.png
+            - oryx/oryx_fantasy/wall6-8.png
+            - oryx/oryx_fantasy/wall6-9.png
+            - oryx/oryx_fantasy/wall6-10.png
+            - oryx/oryx_fantasy/wall6-11.png
+            - oryx/oryx_fantasy/wall6-12.png
+            - oryx/oryx_fantasy/wall6-13.png
+            - oryx/oryx_fantasy/wall6-14.png
+            - oryx/oryx_fantasy/wall6-15.png
+      Block2D:
+        - Color: [ 0.5, 0.5, 0.5 ]
+          Shape: square

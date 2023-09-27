@@ -1,0 +1,364 @@
+# 0.2: 11 feb 2021 - pomdp version of rataban. Includes levels with and without enemies
+# v0.3
+# Incorporates the changes done in the global version to cope with the reward bug
+# v0.4
+# add irrelevant stochasticity level
+# v0.5
+# This version just synchronizes to v0.8 global to include the new env levels
+Version: "0.5"
+Environment:
+  Name: Rataban
+  Description: Push the primordial barril into the hole to become immortal.
+  Observers:
+    Sprite2D:
+      TileSize: 24
+      BackgroundTile: gvgai/oryx/floor2_1.png
+    Block2D:
+      TileSize: 24
+  Variables:
+    - Name: victory
+      InitialValue: 0
+    - Name: death
+      InitialValue: 0
+  Player:
+    Observer:
+      RotateWithAvatar: false
+      TrackAvatar: true
+      Height: 3
+      Width: 3
+      OffsetX: 0
+      OffsetY: 0
+    AvatarObject: avatar # Object to control
+  Termination:
+    Win:
+      - eq: [victory, 1]
+    Lose:
+      - eq: [death, 1] # If the rat gets killed
+      #- eq: [avatar:count, 0] # If the rat gets killed
+  Levels:
+    - |         # 0 - deterministic
+      wwwwwww
+      wA....w
+      w.w.w.w
+      w.....w
+      w....bw
+      wh...cw
+      wwwwwww
+    - |         # 1 - stochastic (with enemy)
+      wwwwwww
+      wA....w
+      w.w.w.w
+      w..s..w
+      w....bw
+      wh...cw
+      wwwwwww
+    - |         # 2 - with enemy and irrelevant butterfly
+      wwwwwww
+      wA....w
+      w.w.w.w
+      w..s..w
+      w..d.bw
+      wh...cw
+      wwwwwww
+    - |         # 3 - deterministic v2 (move agent, hole and cheese)
+      wwwwwww
+      w...A.w
+      w.w.w.w
+      w.....w
+      w.c.h.w
+      w.....w
+      wwwwwww
+    - |         # 4 - deterministic v3 (v2 + more holes)
+      wwwwwww
+      w.c...w
+      w.h.h.w
+      w.....w
+      w...h.w
+      w.A...w
+      wwwwwww
+    - |         # 5 - stochastic v2 (move agent, enemy, hole and cheese)
+      wwwwwww
+      wA....w
+      w.w.w.w
+      w..h..w
+      ws...cw
+      w.....w
+      wwwwwww
+    - |         # 6 - stochastic v3 (move agent, enemy, cheese and more holes)
+      wwwwwww
+      wA....w
+      w...h.w
+      w.h...w
+      w..s..w
+      w.c...w
+      wwwwwww
+
+Actions:
+  - Name: doggo_random_movement
+    InputMapping:
+      Internal: true
+    Behaviours:
+
+      # the doggo can go to
+      - Src:
+          Object: doggo
+          Commands:
+            - mov: _dest
+            - exec:
+                Action: doggo_random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [_empty, hole, cheese, spider, avatar]
+
+      # the doggo cannot go to
+      - Src:
+          Object: doggo
+          Commands:
+            - exec:
+                Action: doggo_random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [wall, box, doggo]
+
+  # Define action that cannot be controlled by the player.
+  # (In this case the spider movement)
+  - Name: random_movement
+    InputMapping:
+      Internal: true
+    Behaviours:
+      # the spider can move into empty space (or where doggo is)
+      - Src:
+          Object: spider
+          Commands:
+            - mov: _dest
+            - exec:
+                Action: random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [_empty, doggo]
+
+      # The spider will not move into the wall (no mov: _dest), but it needs to keep moving
+      - Src:
+          Object: spider
+          Commands:
+            - exec:
+                Action: random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: [wall, hole, cheese, spider, box]
+
+      # If the spider moves to the rat
+      # This isn't handled correctly due to a bug, the reward is only sent in the dictionary
+      - Src:
+          Object: spider
+          Commands:
+            - mov: _dest
+            #- reward: -1
+            - exec:
+                Action: random_movement
+                Delay: 5
+                Randomize: true
+        Dst:
+          Object: avatar
+          Commands:
+            - remove: true
+            - reward: -1
+            - incr: dying
+
+  # Define the move action
+  - Name: move
+    Behaviours:
+      # NOTE: Actually the termination conditions in the game specification (has_cheese->victory, dying->death) aren't
+      # triggered as i'm handling termination externally by analyzing the rewards
+      # Some of the issues might be updated in the next griddly version to handle this internally though
+
+      # the agent does no-op looking operations
+      # for example, dying and then the next time step moving towards a wall
+      - Src:
+          Object: avatar
+          Commands:
+            - eq:
+                Arguments: [has_cheese,1] # if agent obtained cheese we must terminate
+                Commands:
+                  - incr: victory         # This is checked for to terminate the task in a positive way
+            - gt:
+                Arguments: [dying, 0]   # if agent fell into the hole/killed by spider we must terminate
+                Commands:
+                  - incr: death
+        Dst:
+          Object: [avatar, wall]
+
+      # The agent can move around freely in empty space (or doggo)
+      - Src:
+          Object: avatar
+          Commands:
+            - mov: _dest
+            - eq:
+                Arguments: [has_cheese,1] # if agent obtained cheese we must terminate
+                Commands:
+                  - incr: victory         # This is checked for to terminate the task in a positive way
+            - gt:
+                Arguments: [dying, 0]   # if agent fell into the hole/killed by spider we must terminate
+                Commands:
+                  - incr: death
+        Dst:
+          Object: [_empty, doggo]
+
+      # Barrel can move into empty space
+      - Src:
+          Object: box
+          Commands:
+            - mov: _dest
+        Dst:
+          Object: [_empty, hole]
+
+      # The agent can push barrels
+      - Src:
+          Object: avatar
+          Commands:
+            - mov: _dest
+        Dst:
+          Object: box
+          Commands:
+            - cascade: _dest
+
+      # If the rat moves into a hole it suffers a horrible death
+      - Src:
+          Object: avatar
+          Commands:
+            - mov: _dest
+            - incr: dying
+        Dst:
+          Object: hole
+          Commands:
+            - reward: -1
+
+      # If the rat gets the cheese it wins in life
+      - Src:
+          Object: avatar
+          Commands:
+            - mov: _dest
+            - incr: has_cheese  # next step/move we'll terminate due to incr this variable
+        Dst:
+          Object: cheese
+          Commands:
+            - reward: 1
+
+      # If the rat moves into a spider
+      - Src:
+          Object: avatar
+          Commands:
+            - mov: _dest
+            #- remove: true
+            - incr: dying
+        Dst:
+          Object: spider
+          Commands:
+            - reward: -1
+
+Objects:
+  - Name: cheese
+    Z: 1
+    MapCharacter: c
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/slime6.png
+      Block2D:
+        - Shape: triangle
+          Color: [1.0, 1.0, 0.0]
+          Scale: 0.5
+
+  - Name: box
+    Z: 2
+    MapCharacter: b
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/barrel2.png
+      Block2D:
+        - Shape: square
+          Color: [1.0, 0.0, 0.0]
+          Scale: 0.5
+
+  - Name: wall
+    MapCharacter: w
+    Observers:
+      Sprite2D:
+        - TilingMode: WALL_16
+          Image:
+            - gvgai/oryx/dirtWall_0.png
+            - gvgai/oryx/dirtWall_1.png
+            - gvgai/oryx/dirtWall_2.png
+            - gvgai/oryx/dirtWall_3.png
+            - gvgai/oryx/dirtWall_4.png
+            - gvgai/oryx/dirtWall_5.png
+            - gvgai/oryx/dirtWall_6.png
+            - gvgai/oryx/dirtWall_7.png
+            - gvgai/oryx/dirtWall_8.png
+            - gvgai/oryx/dirtWall_9.png
+            - gvgai/oryx/dirtWall_10.png
+            - gvgai/oryx/dirtWall_11.png
+            - gvgai/oryx/dirtWall_12.png
+            - gvgai/oryx/dirtWall_13.png
+            - gvgai/oryx/dirtWall_14.png
+            - gvgai/oryx/dirtWall_15.png
+      Block2D:
+        - Shape: triangle
+          Color: [0.6, 0.6, 0.6]
+          Scale: 0.9
+
+  - Name: hole
+    Z: 1
+    MapCharacter: h
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/cspell4.png
+      Block2D:
+        - Shape: square
+          Color: [0.0, 1.0, 0.0]
+          Scale: 0.6
+
+  - Name: avatar
+    Z: 2
+    MapCharacter: A
+    Variables:
+      - Name: has_cheese
+      - Name: dying
+    Observers:
+      Sprite2D:
+        - Image: gvgai/oryx/rat1.png
+      Block2D:
+        - Shape: triangle
+          Color: [0.2, 0.2, 0.6]
+          Scale: 1.0
+
+  - Name: spider
+    Z: 3
+    InitialActions:
+      - Action: random_movement
+        Delay: 5
+    MapCharacter: s
+    Observers:
+      Sprite2D:
+        - Image: oryx/oryx_fantasy/avatars/spider1.png
+      Block2D:
+        - Shape: triangle
+          Color: [0.9, 0.1, 0.1]
+          Scale: 0.5
+
+  - Name: doggo
+    Z: 4
+    InitialActions:
+      - Action: doggo_random_movement
+        Delay: 5
+    MapCharacter: d
+    Observers:
+      Sprite2D:
+        - Image: gvgai/newset/butterfly1.png
+      Block2D:
+        - Shape: triangle
+          Color: [0.5, 0.4, 0.1]
+          Scale: 0.5
